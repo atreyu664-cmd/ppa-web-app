@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { checkAccessCode } from "@/lib/auth";
 import type { PpaState, TurnMessage } from "@/lib/ppaTypes";
 
@@ -42,14 +42,31 @@ type PdfCtx = {
   bold: PDFFont;
   italic: PDFFont;
   y: number;
+  bodyPage: boolean;
 };
 
 const PAGE_W = 612;
 const PAGE_H = 792;
 const MARGIN_X = 54;
-const TOP = 54;
-const BOTTOM = 54;
+const TOP = 70;
+const BOTTOM = 58;
 const CONTENT_W = PAGE_W - MARGIN_X * 2;
+
+const C = {
+  navy: rgb(0.090, 0.133, 0.196),          // #172232
+  navy2: rgb(0.141, 0.196, 0.275),         // #243246
+  ink: rgb(0.114, 0.153, 0.208),           // #1d2735
+  body: rgb(0.239, 0.282, 0.341),          // #3d4857
+  muted: rgb(0.400, 0.439, 0.522),         // #667085
+  line: rgb(0.863, 0.886, 0.918),          // #dce2ea
+  soft: rgb(0.961, 0.969, 0.980),          // #f5f7fa
+  softer: rgb(0.984, 0.988, 0.992),
+  accent: rgb(0.776, 0.643, 0.404),        // #c6a467
+  accentDark: rgb(0.545, 0.420, 0.196),    // #8b6b32
+  accentSoft: rgb(0.973, 0.957, 0.918),
+  white: rgb(1, 1, 1),
+  green: rgb(0.310, 0.463, 0.373),
+};
 
 function cleanText(input: string) {
   return (input || "")
@@ -70,13 +87,23 @@ function safeFileName(value: string) {
   return cleaned || "PPA";
 }
 
-function newPage(ctx: PdfCtx) {
+function addBodyPage(ctx: PdfCtx) {
   ctx.page = ctx.pdf.addPage([PAGE_W, PAGE_H]);
+  ctx.bodyPage = true;
   ctx.y = PAGE_H - TOP;
+  ctx.page.drawRectangle({ x: 0, y: PAGE_H - 7, width: PAGE_W, height: 7, color: C.navy });
+  ctx.page.drawRectangle({ x: MARGIN_X, y: PAGE_H - 43, width: 24, height: 2.4, color: C.accent });
+  ctx.page.drawText("PREMIUM POSITIONING ARCHITECT", {
+    x: MARGIN_X + 34,
+    y: PAGE_H - 47,
+    size: 8.5,
+    font: ctx.bold,
+    color: C.navy,
+  });
 }
 
 function ensureSpace(ctx: PdfCtx, needed: number) {
-  if (ctx.y - needed < BOTTOM) newPage(ctx);
+  if (ctx.y - needed < BOTTOM) addBodyPage(ctx);
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
@@ -110,138 +137,287 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   return lines;
 }
 
-function drawLines(ctx: PdfCtx, lines: string[], opts?: { font?: PDFFont; size?: number; indent?: number; color?: ReturnType<typeof rgb>; lineGap?: number }) {
+function textHeight(text: string, font: PDFFont, size: number, width: number, lineGap = 4) {
+  const paragraphs = cleanText(text).split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
+  let h = 0;
+  for (const p of paragraphs) h += wrapText(p, font, size, width).length * (size + lineGap) + 7;
+  return h;
+}
+
+function drawLines(ctx: PdfCtx, lines: string[], opts?: { font?: PDFFont; size?: number; x?: number; color?: RGB; lineGap?: number }) {
   const font = opts?.font || ctx.regular;
   const size = opts?.size || 10.5;
-  const indent = opts?.indent || 0;
-  const color = opts?.color || rgb(0.12, 0.15, 0.2);
+  const x = opts?.x ?? MARGIN_X;
+  const color = opts?.color || C.body;
   const lineGap = opts?.lineGap ?? 4;
   const lineHeight = size + lineGap;
   for (const line of lines) {
     ensureSpace(ctx, lineHeight + 2);
-    ctx.page.drawText(line || " ", { x: MARGIN_X + indent, y: ctx.y - size, size, font, color });
+    ctx.page.drawText(line || " ", { x, y: ctx.y - size, size, font, color });
     ctx.y -= lineHeight;
   }
 }
 
-function drawParagraph(ctx: PdfCtx, text: string, opts?: { font?: PDFFont; size?: number; indent?: number; after?: number; color?: ReturnType<typeof rgb> }) {
+function drawParagraph(ctx: PdfCtx, text: string, opts?: { font?: PDFFont; size?: number; x?: number; width?: number; after?: number; color?: RGB; lineGap?: number }) {
   const font = opts?.font || ctx.regular;
   const size = opts?.size || 10.5;
-  const indent = opts?.indent || 0;
+  const x = opts?.x ?? MARGIN_X;
+  const width = opts?.width ?? CONTENT_W;
   const paragraphs = cleanText(text).split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
   for (const p of paragraphs) {
-    const lines = wrapText(p, font, size, CONTENT_W - indent);
-    drawLines(ctx, lines, { font, size, indent, color: opts?.color });
+    const lines = wrapText(p, font, size, width);
+    drawLines(ctx, lines, { font, size, x, color: opts?.color, lineGap: opts?.lineGap });
     ctx.y -= opts?.after ?? 7;
   }
 }
 
-function drawHeading(ctx: PdfCtx, text: string, level = 2) {
-  const size = level === 1 ? 18 : level === 2 ? 14 : 11.5;
-  const before = level === 1 ? 12 : 10;
-  const after = level === 1 ? 10 : 6;
-  ensureSpace(ctx, size + before + after + 8);
-  ctx.y -= before;
-  const lines = wrapText(text, ctx.bold, size, CONTENT_W);
-  drawLines(ctx, lines, { font: ctx.bold, size, color: rgb(0.05, 0.15, 0.26), lineGap: 3 });
-  ctx.y -= after;
+function drawSectionHeader(ctx: PdfCtx, number: string, title: string) {
+  ensureSpace(ctx, 62);
+  ctx.y -= 13;
+  ctx.page.drawText(number, { x: MARGIN_X, y: ctx.y - 10, size: 9.5, font: ctx.bold, color: C.accentDark });
+  const titleLines = wrapText(title, ctx.bold, 17.5, CONTENT_W - 44);
+  let ty = ctx.y;
+  for (const line of titleLines) {
+    ctx.page.drawText(line, { x: MARGIN_X + 44, y: ty - 17.5, size: 17.5, font: ctx.bold, color: C.navy });
+    ty -= 21;
+  }
+  ctx.y = ty - 9;
+  ctx.page.drawLine({ start: { x: MARGIN_X, y: ctx.y }, end: { x: PAGE_W - MARGIN_X, y: ctx.y }, thickness: 0.8, color: C.line });
+  ctx.y -= 17;
 }
 
-function drawBullet(ctx: PdfCtx, text: string) {
-  const fontSize = 10.2;
-  const indent = 14;
+function drawSubheading(ctx: PdfCtx, text: string) {
+  ensureSpace(ctx, 36);
+  ctx.y -= 4;
+  const lines = wrapText(text, ctx.bold, 11.5, CONTENT_W);
+  drawLines(ctx, lines, { font: ctx.bold, size: 11.5, color: C.navy, lineGap: 3 });
+  ctx.y -= 5;
+}
+
+function drawBullet(ctx: PdfCtx, text: string, color: RGB = C.body) {
+  const fontSize = 10.1;
+  const indent = 17;
   const lines = wrapText(cleanText(text), ctx.regular, fontSize, CONTENT_W - indent);
-  ensureSpace(ctx, fontSize + 6);
-  ctx.page.drawText("-", { x: MARGIN_X + 2, y: ctx.y - fontSize, size: fontSize, font: ctx.bold, color: rgb(0.12, 0.15, 0.2) });
-  drawLines(ctx, lines, { font: ctx.regular, size: fontSize, indent, lineGap: 3 });
+  ensureSpace(ctx, Math.max(22, lines.length * 13.1 + 5));
+  ctx.page.drawCircle({ x: MARGIN_X + 4.5, y: ctx.y - 7.2, size: 2.2, color: C.accent });
+  drawLines(ctx, lines, { font: ctx.regular, size: fontSize, x: MARGIN_X + indent, color, lineGap: 3 });
   ctx.y -= 3;
 }
 
-function drawLabelValue(ctx: PdfCtx, label: string, value: string) {
-  drawParagraph(ctx, `${label}: ${value || "-"}`, { size: 10.2, after: 4 });
+function drawInfoCard(ctx: PdfCtx, title: string, rows: Array<{ label: string; value: string }>) {
+  const innerW = CONTENT_W - 32;
+  let height = 42;
+  for (const row of rows) {
+    height += textHeight(row.value || "-", ctx.regular, 9.6, innerW - 118, 3) + 2;
+  }
+  height = Math.max(height, 96);
+  ensureSpace(ctx, height + 14);
+  const topY = ctx.y;
+  ctx.page.drawRectangle({ x: MARGIN_X, y: topY - height, width: CONTENT_W, height, color: C.softer, borderColor: C.line, borderWidth: 0.8 });
+  ctx.page.drawRectangle({ x: MARGIN_X, y: topY - height, width: 4, height, color: C.accent });
+  ctx.page.drawText(cleanText(title), { x: MARGIN_X + 18, y: topY - 24, size: 12.2, font: ctx.bold, color: C.navy });
+  let y = topY - 43;
+  for (const row of rows) {
+    ctx.page.drawText(cleanText(row.label).toUpperCase(), { x: MARGIN_X + 18, y, size: 7.8, font: ctx.bold, color: C.muted });
+    const lines = wrapText(row.value || "-", ctx.regular, 9.6, innerW - 118);
+    let ly = y + 1;
+    for (const line of lines) {
+      ctx.page.drawText(line, { x: MARGIN_X + 122, y: ly, size: 9.6, font: ctx.regular, color: C.body });
+      ly -= 12.6;
+    }
+    y = Math.min(y - 24, ly - 8);
+  }
+  ctx.y = topY - height - 13;
 }
 
-function drawCover(ctx: PdfCtx, title: string, subtitle: string) {
-  const accent = rgb(0.62, 0.43, 0.16);
-  ctx.page.drawRectangle({ x: 0, y: PAGE_H - 12, width: PAGE_W, height: 12, color: accent });
-  const top = PAGE_H - 145;
-  ctx.page.drawText("PREMIUM POSITIONING ARCHITECT", { x: MARGIN_X, y: top, size: 10, font: ctx.bold, color: accent });
-  const titleLines = wrapText(cleanText(title), ctx.bold, 24, CONTENT_W);
-  let y = top - 36;
-  for (const line of titleLines) {
-    ctx.page.drawText(line, { x: MARGIN_X, y, size: 24, font: ctx.bold, color: rgb(0.05, 0.15, 0.26) });
-    y -= 31;
+function drawStatementBox(ctx: PdfCtx, text: string) {
+  const width = CONTENT_W;
+  const lines = wrapText(text, ctx.bold, 13.2, width - 46);
+  const height = 54 + lines.length * 17;
+  ensureSpace(ctx, height + 10);
+  const topY = ctx.y;
+  ctx.page.drawRectangle({ x: MARGIN_X, y: topY - height, width, height, color: C.accentSoft });
+  ctx.page.drawRectangle({ x: MARGIN_X, y: topY - height, width: 5, height, color: C.accent });
+  ctx.page.drawText("POSITIONING STATEMENT", { x: MARGIN_X + 20, y: topY - 22, size: 8, font: ctx.bold, color: C.accentDark });
+  let y = topY - 44;
+  for (const line of lines) {
+    ctx.page.drawText(line, { x: MARGIN_X + 20, y, size: 13.2, font: ctx.bold, color: C.navy });
+    y -= 17;
   }
-  ctx.page.drawText(cleanText(subtitle), { x: MARGIN_X, y: y - 10, size: 11, font: ctx.italic, color: rgb(0.35, 0.39, 0.45) });
-  ctx.page.drawText("Strategic Visibility LLC", { x: MARGIN_X, y: 88, size: 10, font: ctx.bold, color: rgb(0.12, 0.15, 0.2) });
-  ctx.y = BOTTOM;
-  newPage(ctx);
+  ctx.y = topY - height - 14;
+}
+
+function drawQuote(ctx: PdfCtx, label: string, content: string, kind: string) {
+  const lines = wrapText(content, ctx.italic, 10.7, CONTENT_W - 40);
+  const height = 48 + lines.length * 14;
+  ensureSpace(ctx, height + 10);
+  const topY = ctx.y;
+  ctx.page.drawRectangle({ x: MARGIN_X, y: topY - height, width: CONTENT_W, height, color: C.soft });
+  ctx.page.drawText(`"`, { x: MARGIN_X + 16, y: topY - 35, size: 30, font: ctx.bold, color: C.accent });
+  ctx.page.drawText(`${cleanText(label).toUpperCase()}  |  ${cleanText(kind).toUpperCase()}`, { x: MARGIN_X + 42, y: topY - 20, size: 7.5, font: ctx.bold, color: C.muted });
+  let y = topY - 40;
+  for (const line of lines) {
+    ctx.page.drawText(line, { x: MARGIN_X + 42, y, size: 10.7, font: ctx.italic, color: C.body });
+    y -= 14;
+  }
+  ctx.y = topY - height - 10;
+}
+
+function drawPriority(ctx: PdfCtx, index: number, p: Priority) {
+  const width = CONTENT_W;
+  const focusLines = wrapText(p.focus, ctx.regular, 10.2, width - 70);
+  const whyLines = wrapText(p.whyItMatters, ctx.italic, 9.7, width - 70);
+  const height = 62 + focusLines.length * 13.2 + whyLines.length * 12.8;
+  ensureSpace(ctx, height + 10);
+  const topY = ctx.y;
+  ctx.page.drawRectangle({ x: MARGIN_X, y: topY - height, width, height, color: C.softer, borderColor: C.line, borderWidth: 0.8 });
+  ctx.page.drawCircle({ x: MARGIN_X + 28, y: topY - 31, size: 15, color: C.white, borderColor: C.accent, borderWidth: 1.2 });
+  ctx.page.drawText(String(index), { x: MARGIN_X + 24.8, y: topY - 35.5, size: 10.5, font: ctx.bold, color: C.accentDark });
+  ctx.page.drawText(cleanText(p.title), { x: MARGIN_X + 55, y: topY - 27, size: 12, font: ctx.bold, color: C.navy });
+  let y = topY - 49;
+  for (const line of focusLines) {
+    ctx.page.drawText(line, { x: MARGIN_X + 55, y, size: 10.2, font: ctx.regular, color: C.body });
+    y -= 13.2;
+  }
+  y -= 4;
+  ctx.page.drawText("WHY IT MATTERS", { x: MARGIN_X + 55, y, size: 7.4, font: ctx.bold, color: C.muted });
+  y -= 14;
+  for (const line of whyLines) {
+    ctx.page.drawText(line, { x: MARGIN_X + 55, y, size: 9.7, font: ctx.italic, color: C.body });
+    y -= 12.8;
+  }
+  ctx.y = topY - height - 12;
+}
+
+function drawTranscriptMessage(ctx: PdfCtx, message: TurnMessage) {
+  const isUser = message.role === "user";
+  const width = CONTENT_W;
+  const innerW = width - 34;
+  const lines = wrapText(message.content, ctx.regular, 9.7, innerW);
+  const height = 42 + lines.length * 12.8;
+  ensureSpace(ctx, height + 10);
+  const topY = ctx.y;
+  const fill = isUser ? C.accentSoft : C.softer;
+  const border = isUser ? rgb(0.894, 0.847, 0.745) : C.line;
+  ctx.page.drawRectangle({ x: MARGIN_X, y: topY - height, width, height, color: fill, borderColor: border, borderWidth: 0.8 });
+  ctx.page.drawText(isUser ? "CLIENT" : "PPA", { x: MARGIN_X + 16, y: topY - 19, size: 7.6, font: ctx.bold, color: isUser ? C.accentDark : C.navy2 });
+  let y = topY - 38;
+  for (const line of lines) {
+    ctx.page.drawText(line, { x: MARGIN_X + 16, y, size: 9.7, font: ctx.regular, color: C.body });
+    y -= 12.8;
+  }
+  ctx.y = topY - height - 9;
+}
+
+function drawCover(ctx: PdfCtx, title: string, subtitle: string, transcript = false) {
+  ctx.bodyPage = false;
+  ctx.page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.navy });
+  ctx.page.drawRectangle({ x: 0, y: 0, width: 14, height: PAGE_H, color: C.accent });
+
+  // Simple brand tile matching the web app icon language.
+  ctx.page.drawRectangle({ x: MARGIN_X, y: PAGE_H - 116, width: 42, height: 42, color: C.navy2, borderColor: rgb(0.28, 0.34, 0.43), borderWidth: 0.8 });
+  ctx.page.drawText("P", { x: MARGIN_X + 12.5, y: PAGE_H - 103, size: 24, font: ctx.bold, color: C.white });
+  ctx.page.drawCircle({ x: MARGIN_X + 37, y: PAGE_H - 80, size: 3.2, color: rgb(0.85, 0.87, 0.91) });
+
+  ctx.page.drawText("PREMIUM POSITIONING ARCHITECT", { x: MARGIN_X + 56, y: PAGE_H - 90, size: 10.2, font: ctx.bold, color: C.accent });
+  ctx.page.drawText("Strategic Visibility LLC", { x: MARGIN_X + 56, y: PAGE_H - 107, size: 9.3, font: ctx.regular, color: rgb(0.78, 0.82, 0.87) });
+
+  const eyebrow = transcript ? "FULL ASSESSMENT + BLUEPRINT" : "STRATEGIC POSITIONING BLUEPRINT";
+  ctx.page.drawText(eyebrow, { x: MARGIN_X, y: PAGE_H - 205, size: 9.2, font: ctx.bold, color: C.accent });
+
+  const titleLines = wrapText(title || "Strategic Positioning Blueprint", ctx.bold, 27, CONTENT_W);
+  let y = PAGE_H - 245;
+  for (const line of titleLines) {
+    ctx.page.drawText(line, { x: MARGIN_X, y, size: 27, font: ctx.bold, color: C.white });
+    y -= 34;
+  }
+  const subLines = wrapText(subtitle, ctx.regular, 11, CONTENT_W - 40);
+  y -= 5;
+  for (const line of subLines) {
+    ctx.page.drawText(line, { x: MARGIN_X, y, size: 11, font: ctx.regular, color: rgb(0.79, 0.83, 0.88) });
+    y -= 16;
+  }
+
+  ctx.page.drawRectangle({ x: MARGIN_X, y: 98, width: 94, height: 2.5, color: C.accent });
+  ctx.page.drawText("POSITIONING CLARITY", { x: MARGIN_X, y: 78, size: 8, font: ctx.bold, color: C.accent });
+  ctx.page.drawText("Built from client discovery, proof, buyer psychology, and market context.", { x: MARGIN_X, y: 58, size: 8.8, font: ctx.regular, color: rgb(0.73, 0.78, 0.84) });
+
+  addBodyPage(ctx);
 }
 
 function drawBlueprint(ctx: PdfCtx, blueprint: Blueprint) {
-  drawHeading(ctx, "01. Executive Positioning Summary", 1);
-  drawParagraph(ctx, blueprint.executivePositioningSummary);
-  drawHeading(ctx, "02. Business Identity", 1);
-  drawParagraph(ctx, blueprint.businessIdentity);
-  drawHeading(ctx, "03. Ideal Customer", 1);
-  drawParagraph(ctx, blueprint.idealCustomer);
-  drawHeading(ctx, "04. Why Customers Choose You", 1);
-  drawParagraph(ctx, blueprint.whyCustomersChooseYou);
+  drawSectionHeader(ctx, "01", "Executive Positioning Summary");
+  drawParagraph(ctx, blueprint.executivePositioningSummary, { size: 10.7, color: C.body, lineGap: 4.5 });
 
-  drawHeading(ctx, "05. Core Differentiators", 1);
+  drawSectionHeader(ctx, "02", "Business Identity");
+  drawParagraph(ctx, blueprint.businessIdentity, { size: 10.7, lineGap: 4.5 });
+
+  drawSectionHeader(ctx, "03", "Ideal Customer");
+  drawParagraph(ctx, blueprint.idealCustomer, { size: 10.7, lineGap: 4.5 });
+
+  drawSectionHeader(ctx, "04", "Why Customers Choose You");
+  drawParagraph(ctx, blueprint.whyCustomersChooseYou, { size: 10.7, lineGap: 4.5 });
+
+  drawSectionHeader(ctx, "05", "Core Differentiators");
   for (const d of blueprint.coreDifferentiators || []) {
-    drawHeading(ctx, d.title, 2);
-    drawLabelValue(ctx, "Difference", d.difference);
-    drawLabelValue(ctx, "Why it matters", d.buyerRelevance);
-    drawLabelValue(ctx, "Reason to believe", d.reasonToBelieve);
-    ctx.y -= 4;
+    drawInfoCard(ctx, d.title, [
+      { label: "Difference", value: d.difference },
+      { label: "Buyer value", value: d.buyerRelevance },
+      { label: "Proof", value: d.reasonToBelieve },
+    ]);
   }
 
-  drawHeading(ctx, "06. Market Position & Positioning Statement", 1);
-  drawParagraph(ctx, blueprint.marketPosition);
-  drawHeading(ctx, "Positioning Statement", 2);
-  drawParagraph(ctx, blueprint.positioningStatement, { font: ctx.bold, size: 11, after: 10 });
+  drawSectionHeader(ctx, "06", "Market Position & Positioning Statement");
+  drawParagraph(ctx, blueprint.marketPosition, { size: 10.7, lineGap: 4.5 });
+  if (blueprint.positioningStatement) drawStatementBox(ctx, blueprint.positioningStatement);
 
   if (blueprint.competitiveContextSnapshot?.length) {
-    drawHeading(ctx, "Competitive Context Snapshot", 2);
+    drawSubheading(ctx, "Competitive Context Snapshot");
     for (const c of blueprint.competitiveContextSnapshot) {
-      drawHeading(ctx, c.competitor, 3);
-      drawLabelValue(ctx, "Positioning", c.theirPositioning);
-      drawLabelValue(ctx, "Visible strengths", c.apparentStrengths);
-      drawLabelValue(ctx, "Visible weaknesses", c.apparentWeaknesses);
-      drawLabelValue(ctx, "Client opportunity", c.clientOpportunity);
+      drawInfoCard(ctx, c.competitor, [
+        { label: "Positioning", value: c.theirPositioning },
+        { label: "Strengths", value: c.apparentStrengths },
+        { label: "Weaknesses", value: c.apparentWeaknesses },
+        { label: "Opportunity", value: c.clientOpportunity },
+      ]);
     }
   }
 
   if (blueprint.marketResearchSignals?.length) {
-    drawHeading(ctx, "Market Research Signals", 2);
+    drawSubheading(ctx, "Market Research Signals");
     for (const x of blueprint.marketResearchSignals) drawBullet(ctx, x);
+    ctx.y -= 5;
   }
 
-  drawHeading(ctx, "07. Voice of Customer Highlights", 1);
-  for (const v of blueprint.voiceOfCustomerHighlights || []) {
-    drawHeading(ctx, `${v.label} (${v.kind})`, 3);
-    drawParagraph(ctx, v.content, { size: 10.2, after: 5 });
-  }
+  drawSectionHeader(ctx, "07", "Voice of Customer Highlights");
+  for (const v of blueprint.voiceOfCustomerHighlights || []) drawQuote(ctx, v.label, v.content, v.kind);
 
-  drawHeading(ctx, "08. Trust & Proof Snapshot", 1);
+  drawSectionHeader(ctx, "08", "Trust & Proof Snapshot");
   for (const x of blueprint.trustAndProofSnapshot || []) drawBullet(ctx, x);
 
-  drawHeading(ctx, "09. Three Strategic Priorities", 1);
-  for (let i = 0; i < (blueprint.strategicPriorities || []).length; i++) {
-    const p = blueprint.strategicPriorities[i];
-    drawHeading(ctx, `${i + 1}. ${p.title}`, 2);
-    drawParagraph(ctx, p.focus, { after: 5 });
-    drawParagraph(ctx, `Why it matters: ${p.whyItMatters}`, { font: ctx.italic, size: 10, after: 8 });
-  }
+  drawSectionHeader(ctx, "09", "Three Strategic Priorities");
+  for (let i = 0; i < (blueprint.strategicPriorities || []).length; i++) drawPriority(ctx, i + 1, blueprint.strategicPriorities[i]);
 
   if (blueprint.openQuestions?.length) {
-    drawHeading(ctx, "Open Questions / Information Gaps", 1);
-    for (const x of blueprint.openQuestions) drawBullet(ctx, x);
+    drawSubheading(ctx, "Open Questions / Information Gaps");
+    for (const x of blueprint.openQuestions) drawBullet(ctx, x, C.muted);
   }
 
-  drawHeading(ctx, "What this Blueprint is for", 1);
-  drawParagraph(ctx, blueprint.nextStep);
+  drawSubheading(ctx, "What this Blueprint is for");
+  drawParagraph(ctx, blueprint.nextStep, { size: 10.2, color: C.muted, lineGap: 4 });
+}
+
+function addFooters(ctx: PdfCtx) {
+  const pages = ctx.pdf.getPages();
+  const total = pages.length;
+  pages.forEach((page, i) => {
+    if (i === 0) return;
+    page.drawLine({ start: { x: MARGIN_X, y: 38 }, end: { x: PAGE_W - MARGIN_X, y: 38 }, thickness: 0.6, color: C.line });
+    page.drawText("Strategic Visibility LLC  |  Premium Positioning Architect", { x: MARGIN_X, y: 23, size: 7.3, font: ctx.regular, color: C.muted });
+    const num = `${i + 1} / ${total}`;
+    const w = ctx.regular.widthOfTextAtSize(num, 7.3);
+    page.drawText(num, { x: PAGE_W - MARGIN_X - w, y: 23, size: 7.3, font: ctx.regular, color: C.muted });
+  });
 }
 
 async function createPdf(body: ExportBody) {
@@ -250,7 +426,7 @@ async function createPdf(body: ExportBody) {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
   const firstPage = pdf.addPage([PAGE_W, PAGE_H]);
-  const ctx: PdfCtx = { pdf, page: firstPage, regular, bold, italic, y: PAGE_H - TOP };
+  const ctx: PdfCtx = { pdf, page: firstPage, regular, bold, italic, y: PAGE_H - TOP, bodyPage: false };
 
   pdf.setCreator("Strategic Visibility LLC");
   pdf.setProducer("Premium Positioning Architect");
@@ -258,30 +434,28 @@ async function createPdf(body: ExportBody) {
   pdf.setSubject("Strategic Positioning Blueprint generated through the Premium Positioning Architect");
 
   if (body.includeTranscript) {
-    drawCover(ctx, body.blueprint.title || "Full PPA Assessment", "Full Assessment Conversation + Strategic Positioning Blueprint");
-    drawHeading(ctx, "Full Assessment Conversation", 1);
-    for (const message of body.messages || []) {
-      drawHeading(ctx, message.role === "assistant" ? "PPA" : "Client", 3);
-      drawParagraph(ctx, message.content, { size: 10.1, after: 8 });
-    }
+    drawCover(ctx, body.blueprint.title || "Full PPA Assessment", "Complete assessment conversation, research notes, and Strategic Positioning Blueprint.", true);
+    drawSectionHeader(ctx, "A", "Full Assessment Conversation");
+    drawParagraph(ctx, "The following appendix preserves the client's original answers and the PPA's reflections so Strategic Visibility can trace every positioning conclusion back to the discovery conversation.", { size: 9.8, color: C.muted, after: 12 });
+    for (const message of body.messages || []) drawTranscriptMessage(ctx, message);
 
     const researchNotes = body.state?.facts?.sourceNotes || [];
     const researchFindings = body.state?.facts?.researchFindings || [];
     if (researchFindings.length || researchNotes.length) {
-      drawHeading(ctx, "Research & Source Notes", 1);
+      drawSectionHeader(ctx, "B", "Research & Source Notes");
       for (const x of researchFindings) drawBullet(ctx, x);
       for (const x of researchNotes) drawBullet(ctx, x);
     }
 
-    newPage(ctx);
-    drawHeading(ctx, "Strategic Positioning Blueprint", 1);
-    ctx.y -= 4;
+    addBodyPage(ctx);
+    drawSectionHeader(ctx, "", "Strategic Positioning Blueprint");
     drawBlueprint(ctx, body.blueprint);
   } else {
-    drawCover(ctx, body.blueprint.title || "Strategic Positioning Blueprint", "Strategic Positioning Blueprint");
+    drawCover(ctx, body.blueprint.title || "Strategic Positioning Blueprint", "A clear, evidence-grounded reference for how the business should be understood and positioned in its market.");
     drawBlueprint(ctx, body.blueprint);
   }
 
+  addFooters(ctx);
   return pdf.save();
 }
 

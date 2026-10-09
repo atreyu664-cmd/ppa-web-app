@@ -24,3 +24,9 @@ Set `PPA_ENABLE_WEB_RESEARCH=true` in Vercel and redeploy to activate focused ma
 ## v1.3.0 change
 
 PDF export now uses `pdf-lib` server-side and returns `application/pdf`. Full production compilation should be verified by Vercel because package installation is unavailable in the local build environment.
+
+## v1.3.1 exporter QA
+- Reworked PDF exporter to mirror the web app's navy / gold / soft-gray design language.
+- Added premium cover treatment, branded running headers, page numbers, section-number hierarchy, differentiator cards, positioning statement callout, VOC quote panels, strategic-priority cards, and styled transcript blocks.
+- Kept direct PDF download behavior and separate browser Print / Save PDF fallback.
+- TypeScript parser check reached only unresolved-import errors in the local environment; no route syntax errors were reported. Final Next.js production compile remains Vercel's responsibility.
