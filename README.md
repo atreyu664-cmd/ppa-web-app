@@ -93,7 +93,7 @@ The opening question is rendered locally for an immediate start. When an access 
 - Adds Save Blueprint and Save Full Assessment + Blueprint export options.
 
 
-## v1.3.1 changes
+## v1.4.0 changes
 
 - Direct Word (`.docx`) downloads for Blueprint-only and Full Assessment + Blueprint exports.
 - Kept Print / Save PDF as a separate optional action instead of mislabeling print as save.
@@ -102,7 +102,7 @@ The opening question is rendered locally for an immediate start. When an access 
 - Added a stricter silent completeness audit before the interview can move to `ready`; question count remains adaptive rather than fixed.
 
 
-## v1.3.1 PDF export
+## v1.4.0 PDF export
 
 - Blueprint downloads are now real PDF files.
 - Full Assessment + Blueprint downloads are now real PDF files.
@@ -110,8 +110,12 @@ The opening question is rendered locally for an immediate start. When an access 
 - DOCX generation was removed, so recipients do not need Microsoft Word.
 
 
-## v1.3.1 PDF redesign
+## v1.4.0 PDF redesign
 - Premium branded PDF cover matching the web app navy/gold system.
 - Section-number hierarchy, branded page headers/footers, and page numbers.
 - Differentiator cards, positioning statement callout, Voice of Customer quote panels, strategic priority cards, and styled transcript appendix.
 - PDF remains a true direct download; Print / Save PDF remains separate.
+
+## v1.4.0 PDF parity upgrade
+
+The PDF exporter now renders the Blueprint as HTML/CSS through headless Chromium rather than drawing a conventional report with PDF primitives. The export intentionally mirrors the web Blueprint design: same navy cover, Georgia-style editorial headings, section numbering, whitespace rhythm, differentiator cards, positioning statement treatment, Voice of Customer styling, priority layout, and transcript message bubbles. Full Assessment exports place the polished Blueprint first and the complete conversation in an appendix.
