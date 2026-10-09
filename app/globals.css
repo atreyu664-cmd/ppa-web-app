@@ -21,17 +21,15 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 
 .app-shell { min-height: 100vh; }
 .topbar { height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 32px; background: rgba(255,255,255,.97); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
-.brand { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; min-width: 0; }
-.brand img { width: 42px; height: 42px; border-radius: 10px; }
-.brand strong, .brand span { display: block; }
-.brand strong { font-size: 15px; letter-spacing: -.01em; }
-.brand span { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.brand.compact img { width: 36px; height: 36px; }
+.sv-brand { display: inline-flex; align-items: center; text-decoration: none; min-width: 0; }
+.sv-brand img { display: block; width: min(240px, 44vw); height: 46px; object-fit: contain; object-position: left center; }
 
 .text-button { border: 0; background: transparent; color: var(--muted); padding: 10px 2px; }
 .text-button:hover { color: var(--ink); }
 
-.welcome { max-width: 890px; margin: 0 auto; padding: 86px 28px 80px; text-align: center; }
+.welcome { max-width: 890px; margin: 0 auto; padding: 54px 28px 80px; text-align: center; }
+.welcome-mark-wrap { display: flex; justify-content: center; margin: 0 auto 30px; }
+.welcome-mark { display: block; width: clamp(210px, 32vw, 300px); aspect-ratio: 1 / 1; object-fit: cover; border-radius: 24px; box-shadow: 0 18px 46px rgba(23,34,50,.16); }
 .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-dark); }
 .welcome h1 { max-width: 780px; margin: 18px auto 20px; font-family: Georgia, "Times New Roman", serif; font-weight: 500; font-size: clamp(42px, 7vw, 72px); line-height: 1.02; letter-spacing: -.035em; color: var(--navy); }
 .lede { max-width: 730px; margin: 0 auto; font-size: 19px; line-height: 1.65; color: #556172; }
@@ -142,8 +140,7 @@ dd { margin: 0; line-height: 1.55; color: #414c5b; }
 }
 
 @media (max-width: 520px) {
-  .brand strong { font-size: 13px; }
-  .brand span { display: none; }
+  .sv-brand img { width: min(205px, 62vw); height: 40px; }
   .welcome h1 { font-size: 43px; }
   .lede { font-size: 17px; }
   .form-actions { align-items: stretch; flex-direction: column-reverse; }

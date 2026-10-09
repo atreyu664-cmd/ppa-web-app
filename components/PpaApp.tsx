@@ -222,18 +222,27 @@ export default function PpaApp() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#" aria-label="Premium Positioning Architect home">
-          <img src="/ppa-logo.svg" alt="" />
-          <div>
-            <strong>Premium Positioning Architect™</strong>
-            <span>by Strategic Visibility</span>
-          </div>
+        <a
+          className="sv-brand"
+          href="https://strategicvisibility.net"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Visit Strategic Visibility"
+        >
+          <img src="/strategic-visibility-logo.png" alt="Strategic Visibility" />
         </a>
         {started && <button className="text-button" type="button" onClick={reset}>Start over</button>}
       </header>
 
       {!started ? (
         <section className="welcome">
+          <div className="welcome-mark-wrap">
+            <img
+              className="welcome-mark"
+              src="/ppa-premium-mark.png"
+              alt="Premium Positioning Architect"
+            />
+          </div>
           <div className="eyebrow">Strategic Positioning Assessment</div>
           <h1>Get clear on why the right customers should choose you.</h1>
           <p className="lede">
