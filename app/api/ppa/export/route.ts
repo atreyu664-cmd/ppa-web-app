@@ -217,7 +217,12 @@ export async function POST(request: Request) {
     const base = safeFileName(body.blueprint.title || body.state?.facts?.companyName || "PPA");
     const filename = body.includeTranscript ? `${base}-Full-Assessment-and-Blueprint.docx` : `${base}-Strategic-Positioning-Blueprint.docx`;
 
-    return new Response(buffer, {
+    // Convert Node's Buffer into a web-compatible Uint8Array before
+    // passing it to the Fetch API Response constructor.
+    const bytes = new Uint8Array(buffer.length);
+    bytes.set(buffer);
+
+    return new Response(bytes, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

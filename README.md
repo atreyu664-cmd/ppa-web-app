@@ -93,7 +93,7 @@ The opening question is rendered locally for an immediate start. When an access 
 - Adds Save Blueprint and Save Full Assessment + Blueprint export options.
 
 
-## v1.2.0 changes
+## v1.2.1 changes
 
 - Direct Word (`.docx`) downloads for Blueprint-only and Full Assessment + Blueprint exports.
 - Kept Print / Save PDF as a separate optional action instead of mislabeling print as save.
