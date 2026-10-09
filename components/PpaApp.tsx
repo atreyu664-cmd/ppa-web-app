@@ -344,20 +344,20 @@ function BlueprintView({ blueprint, messages, state, accessCode, onReset }: { bl
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Unable to create the download.");
+        throw new Error(data.error || "Unable to create the PDF.");
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       const base = safeFileName(blueprint.title || state.facts.companyName || "PPA");
-      a.download = includeTranscript ? `${base}-Full-Assessment-and-Blueprint.docx` : `${base}-Strategic-Positioning-Blueprint.docx`;
+      a.download = includeTranscript ? `${base}-Full-Assessment-and-Blueprint.pdf` : `${base}-Strategic-Positioning-Blueprint.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      setExportError(e instanceof Error ? e.message : "Unable to create the download.");
+      setExportError(e instanceof Error ? e.message : "Unable to create the PDF.");
     } finally {
       setExporting(null);
     }
@@ -374,8 +374,8 @@ function BlueprintView({ blueprint, messages, state, accessCode, onReset }: { bl
         <div className="export-actions">
           <button className="secondary-button" type="button" onClick={onReset}>New assessment</button>
           <button className="secondary-button" type="button" onClick={printOrSavePdf}>Print / Save PDF</button>
-          <button className="secondary-button" type="button" onClick={() => downloadDocument(false)} disabled={exporting !== null}>{exporting === "blueprint" ? "Preparing…" : "Download Blueprint"}</button>
-          <button className="primary-button" type="button" onClick={() => downloadDocument(true)} disabled={exporting !== null}>{exporting === "full" ? "Preparing…" : "Download Full Assessment + Blueprint"}</button>
+          <button className="secondary-button" type="button" onClick={() => downloadDocument(false)} disabled={exporting !== null}>{exporting === "blueprint" ? "Preparing…" : "Download Blueprint PDF"}</button>
+          <button className="primary-button" type="button" onClick={() => downloadDocument(true)} disabled={exporting !== null}>{exporting === "full" ? "Preparing…" : "Download Full Assessment + Blueprint PDF"}</button>
         </div>
       </div>
       {exportError && <div className="error-box no-print" role="alert">{exportError}</div>}

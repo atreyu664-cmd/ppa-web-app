@@ -93,10 +93,18 @@ The opening question is rendered locally for an immediate start. When an access 
 - Adds Save Blueprint and Save Full Assessment + Blueprint export options.
 
 
-## v1.2.1 changes
+## v1.3.0 changes
 
 - Direct Word (`.docx`) downloads for Blueprint-only and Full Assessment + Blueprint exports.
 - Kept Print / Save PDF as a separate optional action instead of mislabeling print as save.
 - Final Blueprint synthesis now receives the full assessment conversation in addition to structured discovery state, preserving nuance and exact client language.
 - Full Assessment export includes the complete conversation, Blueprint, and available research/source notes.
 - Added a stricter silent completeness audit before the interview can move to `ready`; question count remains adaptive rather than fixed.
+
+
+## v1.3.0 PDF export
+
+- Blueprint downloads are now real PDF files.
+- Full Assessment + Blueprint downloads are now real PDF files.
+- Browser Print / Save PDF remains available as a separate fallback.
+- DOCX generation was removed, so recipients do not need Microsoft Word.

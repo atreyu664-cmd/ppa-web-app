@@ -19,3 +19,8 @@
 
 ## Production setting
 Set `PPA_ENABLE_WEB_RESEARCH=true` in Vercel and redeploy to activate focused market/competitor research.
+
+
+## v1.3.0 change
+
+PDF export now uses `pdf-lib` server-side and returns `application/pdf`. Full production compilation should be verified by Vercel because package installation is unavailable in the local build environment.
