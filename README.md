@@ -91,3 +91,12 @@ The opening question is rendered locally for an immediate start. When an access 
 - Adds service hierarchy, qualification/disqualification, buying-decision structure, and top-three competitor self-assessment.
 - Adds selective public research and a compact Competitive Context Snapshot / Market Research Signals inside the Blueprint.
 - Adds Save Blueprint and Save Full Assessment + Blueprint export options.
+
+
+## v1.2.0 changes
+
+- Direct Word (`.docx`) downloads for Blueprint-only and Full Assessment + Blueprint exports.
+- Kept Print / Save PDF as a separate optional action instead of mislabeling print as save.
+- Final Blueprint synthesis now receives the full assessment conversation in addition to structured discovery state, preserving nuance and exact client language.
+- Full Assessment export includes the complete conversation, Blueprint, and available research/source notes.
+- Added a stricter silent completeness audit before the interview can move to `ready`; question count remains adaptive rather than fixed.

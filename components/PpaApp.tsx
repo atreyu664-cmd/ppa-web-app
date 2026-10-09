@@ -190,7 +190,7 @@ export default function PpaApp() {
       const response = await fetch("/api/ppa/blueprint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state, useResearch: true, accessCode }),
+        body: JSON.stringify({ state, messages, useResearch: true, accessCode }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to generate the Blueprint.");
@@ -216,7 +216,7 @@ export default function PpaApp() {
   }
 
   if (blueprint) {
-    return <BlueprintView blueprint={blueprint} messages={messages} onReset={reset} />;
+    return <BlueprintView blueprint={blueprint} messages={messages} state={state} accessCode={accessCode} onReset={reset} />;
   }
 
   return (
@@ -323,38 +323,62 @@ export default function PpaApp() {
   );
 }
 
-function BlueprintView({ blueprint, messages, onReset }: { blueprint: Blueprint; messages: TurnMessage[]; onReset: () => void }) {
-  const [fullPrint, setFullPrint] = useState(false);
+function BlueprintView({ blueprint, messages, state, accessCode, onReset }: { blueprint: Blueprint; messages: TurnMessage[]; state: PpaState; accessCode: string; onReset: () => void }) {
+  const [exporting, setExporting] = useState<"blueprint" | "full" | null>(null);
+  const [exportError, setExportError] = useState("");
 
-  function printBlueprintOnly() {
-    setFullPrint(false);
-    window.setTimeout(() => window.print(), 0);
+  function safeFileName(value: string) {
+    const cleaned = (value || "PPA").replace(/[^a-z0-9\-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 80);
+    return cleaned || "PPA";
   }
 
-  function printFullAssessment() {
-    setFullPrint(true);
-    window.setTimeout(() => window.print(), 50);
-    window.setTimeout(() => setFullPrint(false), 1500);
+  async function downloadDocument(includeTranscript: boolean) {
+    const kind = includeTranscript ? "full" : "blueprint";
+    setExporting(kind);
+    setExportError("");
+    try {
+      const response = await fetch("/api/ppa/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blueprint, messages, state, includeTranscript, accessCode }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Unable to create the download.");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const base = safeFileName(blueprint.title || state.facts.companyName || "PPA");
+      a.download = includeTranscript ? `${base}-Full-Assessment-and-Blueprint.docx` : `${base}-Strategic-Positioning-Blueprint.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Unable to create the download.");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  function printOrSavePdf() {
+    window.print();
   }
 
   return (
     <main className="blueprint-shell">
       <div className="blueprint-actions no-print">
         <div className="brand compact"><img src="/ppa-logo.svg" alt="" /><div><strong>Premium Positioning Architect™</strong><span>Strategic Visibility</span></div></div>
-        <div className="export-actions"><button className="secondary-button" type="button" onClick={onReset}>New assessment</button><button className="secondary-button" type="button" onClick={printBlueprintOnly}>Save Blueprint</button><button className="primary-button" type="button" onClick={printFullAssessment}>Save Full Assessment + Blueprint</button></div>
-      </div>
-
-      <section className={fullPrint ? "assessment-transcript" : "assessment-transcript no-print"}>
-        <header className="transcript-cover"><div className="eyebrow">Premium Positioning Architect™</div><h1>Full Assessment Conversation</h1><p>Questions, client answers, PPA reflections, and the Strategic Positioning Blueprint.</p></header>
-        <div className="transcript-list">
-          {messages.map((message, i) => (
-            <div key={`${message.role}-${i}`} className={`transcript-entry ${message.role}`}>
-              <span>{message.role === "assistant" ? "PPA" : "Client"}</span>
-              <p>{message.content}</p>
-            </div>
-          ))}
+        <div className="export-actions">
+          <button className="secondary-button" type="button" onClick={onReset}>New assessment</button>
+          <button className="secondary-button" type="button" onClick={printOrSavePdf}>Print / Save PDF</button>
+          <button className="secondary-button" type="button" onClick={() => downloadDocument(false)} disabled={exporting !== null}>{exporting === "blueprint" ? "Preparing…" : "Download Blueprint"}</button>
+          <button className="primary-button" type="button" onClick={() => downloadDocument(true)} disabled={exporting !== null}>{exporting === "full" ? "Preparing…" : "Download Full Assessment + Blueprint"}</button>
         </div>
-      </section>
+      </div>
+      {exportError && <div className="error-box no-print" role="alert">{exportError}</div>}
 
       <article className="blueprint-document">
         <header className="blueprint-cover">
@@ -382,15 +406,13 @@ function BlueprintView({ blueprint, messages, onReset }: { blueprint: Blueprint;
         </BlueprintSection>
 
         <BlueprintSection n="07" title="Voice of Customer Highlights">
-          <div className="voc-list">{blueprint.voiceOfCustomerHighlights.map((v, i) => <div key={i}><span>{v.label} · {v.kind}</span><p>{v.content}</p></div>)}</div>
+          <div className="voc-list">{blueprint.voiceOfCustomerHighlights.map((v, i) => <div className="voc-item" key={i}><span>{v.label}</span><p>{v.content}</p><small>{v.kind === "exact" ? "Exact remembered language" : v.kind === "paraphrase" ? "Close paraphrase" : "Recurring theme"}</small></div>)}</div>
         </BlueprintSection>
 
-        <BlueprintSection n="08" title="Trust & Proof Snapshot">
-          <ul className="proof-list">{blueprint.trustAndProofSnapshot.map((x, i) => <li key={i}>{x}</li>)}</ul>
-        </BlueprintSection>
+        <BlueprintSection n="08" title="Trust & Proof Snapshot"><ul className="proof-list">{blueprint.trustAndProofSnapshot.map((x, i) => <li key={i}>{x}</li>)}</ul></BlueprintSection>
 
         <BlueprintSection n="09" title="Three Strategic Priorities">
-          <div className="priority-list">{blueprint.strategicPriorities.map((p, i) => <div key={i}><span>{String(i + 1).padStart(2, "0")}</span><div><h3>{p.title}</h3><p>{p.focus}</p><small>{p.whyItMatters}</small></div></div>)}</div>
+          <div className="priority-list">{blueprint.strategicPriorities.map((p, i) => <div className="priority-item" key={i}><span>{i + 1}</span><div><h3>{p.title}</h3><p>{p.focus}</p><small>{p.whyItMatters}</small></div></div>)}</div>
         </BlueprintSection>
 
         {!!blueprint.openQuestions.length && <BlueprintSection n="+" title="Open Questions / Information Gaps"><ul className="proof-list">{blueprint.openQuestions.map((x, i) => <li key={i}>{x}</li>)}</ul></BlueprintSection>}

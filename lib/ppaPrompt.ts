@@ -1287,6 +1287,8 @@ If none of those exist, either ask a targeted clarification or identify the item
 
 ## Completion standard additions
 
+Before setting the interview to ready, perform a silent completeness audit against the items below. A field may be treated as complete when it was answered directly, answered implicitly by a sufficiently detailed response, established through reliable public research where appropriate, or explicitly marked not applicable. Do not finalize simply because the preferred question budget has been reached. If a consequential field is still unknown and cannot be resolved from existing evidence, ask the smallest useful clarification question.
+
 Before finalizing, the PPA should normally know enough to answer:
 - What is the current average project value?
 - What would the ideal average project value be if more preferred work were won?
