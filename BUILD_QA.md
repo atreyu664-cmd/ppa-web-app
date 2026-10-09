@@ -7,3 +7,9 @@
 - PDF user/client text is HTML-escaped before rendering.
 - API key remains server-side.
 - Vercel production build/runtime is the final compatibility check for the Chromium package.
+
+## v1.4.2 checks
+- PDF cover footer enlarged.
+- Assessment date added to cover.
+- Print CSS tightened for heading/card/page-break integrity.
+- Major strategic sections receive deliberate page starts to reduce awkward runovers.

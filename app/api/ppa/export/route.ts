@@ -57,6 +57,15 @@ function safeFileName(value: string) {
   return cleaned || "PPA";
 }
 
+function formattedAssessmentDate() {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "America/New_York",
+  }).format(new Date());
+}
+
 function paragraphs(text: string) {
   return String(text || "")
     .split(/\n{2,}/)
@@ -168,6 +177,7 @@ async function logoDataUrl() {
 async function buildHtml(body: ExportBody) {
   const logo = await logoDataUrl();
   const blueprint = body.blueprint;
+  const assessmentDate = formattedAssessmentDate();
   return `<!doctype html>
 <html>
 <head>
@@ -191,11 +201,13 @@ async function buildHtml(body: ExportBody) {
   .eyebrow { font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#e1cfae; }
   .blueprint-cover h1 { margin:20px 0 16px; max-width:6.7in; font-family:Georgia, "Times New Roman", serif; font-weight:500; font-size:42px; line-height:1.08; letter-spacing:-.025em; }
   .blueprint-cover > p { margin:0; color:#cbd3df; font-size:14px; }
-  .cover-rule { position:absolute; left:.78in; bottom:.72in; width:1.05in; height:3px; background:var(--accent); }
-  .cover-footer { position:absolute; left:.78in; bottom:.42in; font-size:9px; color:#aeb9c7; }
+  .cover-meta { margin-top:13px; display:flex; gap:18px; flex-wrap:wrap; color:#dbe2eb; font-size:11.5px; line-height:1.45; }
+  .cover-meta strong { color:#fff; font-weight:700; }
+  .cover-rule { position:absolute; left:.78in; bottom:.78in; width:1.05in; height:3px; background:var(--accent); }
+  .cover-footer { position:absolute; left:.78in; right:.78in; bottom:.43in; font-size:11px; line-height:1.45; color:#bcc6d3; }
 
-  .blueprint-section { padding:.56in .72in .52in; border-bottom:1px solid #e8ebef; break-inside:auto; }
-  .section-heading { display:flex; align-items:baseline; gap:16px; margin-bottom:25px; }
+  .blueprint-section { padding:.56in .72in .52in; border-bottom:1px solid #e8ebef; break-inside:auto; page-break-inside:auto; }
+  .section-heading { display:flex; align-items:baseline; gap:16px; margin-bottom:25px; break-after:avoid-page; page-break-after:avoid; }
   .section-heading > span { color:var(--accent-dark); font-size:11px; font-weight:850; letter-spacing:.12em; }
   .section-heading h2 { margin:0; font-family:Georgia, "Times New Roman", serif; font-weight:500; font-size:27px; line-height:1.2; color:var(--navy); }
   .prose { color:#3d4857; font-size:15px; line-height:1.72; }
@@ -252,9 +264,22 @@ async function buildHtml(body: ExportBody) {
   .research-notes h2 { margin:0 0 12px; font-family:Georgia, "Times New Roman", serif; color:var(--navy); font-weight:500; font-size:22px; }
   .research-notes ul { margin:0; padding-left:20px; color:#414c5b; font-size:12px; line-height:1.55; }
 
-  /* Keep the PDF visually close to the web experience, not like a conventional report. */
-  h1,h2,h3,h4,p,dl,ul { orphans:3; widows:3; }
-  .diff-card,.competitor-card,.positioning-statement,.voc-item,.priority-item,.transcript-message { page-break-inside:avoid; }
+  /* Print rhythm: keep headings with their content and prevent cards/callouts from splitting. */
+  h1,h2,h3,h4 { break-after:avoid-page; page-break-after:avoid; }
+  p,li,dd { orphans:3; widows:3; }
+  .section-heading + .prose, .section-heading + .diff-grid, .section-heading + .voc-list,
+  .section-heading + .proof-list, .section-heading + .priority-list { break-before:avoid-page; page-break-before:avoid; }
+  .diff-card,.competitor-card,.positioning-statement,.voc-item,.priority-item,.transcript-message { break-inside:avoid-page; page-break-inside:avoid; }
+  .competitive-snapshot,.market-signals,.research-notes,.blueprint-footer { break-inside:avoid-page; page-break-inside:avoid; }
+  .diff-grid,.voc-list,.priority-list,.transcript { align-content:start; }
+  .appendix h1,.appendix-lede { break-after:avoid-page; page-break-after:avoid; }
+  @media print {
+    .blueprint-section:nth-of-type(5),
+    .blueprint-section:nth-of-type(6),
+    .blueprint-section:nth-of-type(7),
+    .blueprint-section:nth-of-type(9) { break-before:page; page-break-before:always; }
+    .blueprint-section:nth-of-type(8) { break-before:auto; page-break-before:auto; }
+  }
 </style>
 </head>
 <body>
@@ -267,6 +292,7 @@ async function buildHtml(body: ExportBody) {
       <div class="eyebrow">Strategic Positioning Blueprint™</div>
       <h1>${h(blueprint.title)}</h1>
       <p>Prepared through the Premium Positioning Architect™</p>
+      <div class="cover-meta"><span><strong>Assessment date:</strong> ${h(assessmentDate)}</span></div>
       <div class="cover-rule"></div>
       <div class="cover-footer">Positioning clarity grounded in client discovery, proof, buyer psychology, and market context.</div>
     </header>
