@@ -13,6 +13,8 @@ export type DiscoveryMap = {
   desiredWork: Strength;
   unwantedWork: Strength;
   economicFit: Strength;
+  serviceAreaFit: Strength;
+  customerValue: Strength;
   businessDirection: Strength;
   bestCustomerPattern: Strength;
   buyingTrigger: Strength;
@@ -22,6 +24,10 @@ export type DiscoveryMap = {
   decisionCriteria: Strength;
   alternatives: Strength;
   premiumBuyingLogic: Strength;
+  decisionStructure: Strength;
+  leadIntakeSales: Strength;
+  projectDelivery: Strength;
+  serviceHierarchy: Strength;
   poorFitPattern: Strength;
   choiceReasons: Strength;
   experienceDifferences: Strength;
@@ -34,6 +40,8 @@ export type DiscoveryMap = {
   voiceOfCustomer: Strength;
   trustAssets: Strength;
   competitiveSeparation: Strength;
+  competitorSelfAssessment: Strength;
+  marketResearch: Strength;
   positioningReadiness: Strength;
 };
 
@@ -41,11 +49,15 @@ export type PpaFacts = {
   companyName: string;
   businessSummary: string;
   geography: string;
+  priorityServiceAreas: string[];
   currentWork: string[];
   desiredWork: string[];
   unwantedWork: string[];
   typicalProjectValue: string;
   idealProjectValue: string;
+  customerAov: string;
+  customerLtv: string;
+  highestValueServices: string[];
   direction: string;
   bestCustomerPatterns: string[];
   buyingTriggers: string[];
@@ -55,6 +67,13 @@ export type PpaFacts = {
   decisionCriteria: string[];
   alternatives: string[];
   premiumBuyingLogic: string[];
+  decisionStructure: string;
+  leadIntakeSalesProcess: string;
+  projectDeliveryProcess: string;
+  operationalDifferentiators: string[];
+  serviceHierarchy: string[];
+  qualificationCriteria: string[];
+  disqualificationCriteria: string[];
   poorFitPatterns: string[];
   choiceReasons: string[];
   experienceDifferences: string[];
@@ -68,6 +87,8 @@ export type PpaFacts = {
   voiceOfCustomerThemes: string[];
   trustAssets: string[];
   competitors: string[];
+  competitorSelfAssessment: string[];
+  researchFindings: string[];
   sourceNotes: string[];
   unresolved: string[];
 };

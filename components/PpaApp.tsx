@@ -7,6 +7,7 @@ import type { PpaState, TurnMessage, TurnResponse } from "@/lib/ppaTypes";
 type Differentiator = { title: string; difference: string; buyerRelevance: string; reasonToBelieve: string };
 type Voc = { label: string; content: string; kind: "exact" | "paraphrase" | "theme" };
 type Priority = { title: string; focus: string; whyItMatters: string };
+type CompetitorSnapshot = { competitor: string; theirPositioning: string; apparentStrengths: string; apparentWeaknesses: string; clientOpportunity: string };
 type Blueprint = {
   title: string;
   executivePositioningSummary: string;
@@ -16,6 +17,8 @@ type Blueprint = {
   coreDifferentiators: Differentiator[];
   marketPosition: string;
   positioningStatement: string;
+  competitiveContextSnapshot: CompetitorSnapshot[];
+  marketResearchSignals: string[];
   voiceOfCustomerHighlights: Voc[];
   trustAndProofSnapshot: string[];
   strategicPriorities: Priority[];
@@ -23,8 +26,8 @@ type Blueprint = {
   nextStep: string;
 };
 
-const STORAGE_KEY = "ppa-web-session-v2";
-const LEGACY_STORAGE_KEYS = ["ppa-web-session-v1"];
+const STORAGE_KEY = "ppa-web-session-v3";
+const LEGACY_STORAGE_KEYS = ["ppa-web-session-v1", "ppa-web-session-v2"];
 const OPENING_QUESTION = "Before we get into positioning, give me the quick picture: what does your company do, where do you operate, and what kind of work makes up most of the business today?";
 const STAGES = [
   ["business_direction", "Business Direction"],
@@ -213,7 +216,7 @@ export default function PpaApp() {
   }
 
   if (blueprint) {
-    return <BlueprintView blueprint={blueprint} onReset={reset} />;
+    return <BlueprintView blueprint={blueprint} messages={messages} onReset={reset} />;
   }
 
   return (
@@ -320,13 +323,38 @@ export default function PpaApp() {
   );
 }
 
-function BlueprintView({ blueprint, onReset }: { blueprint: Blueprint; onReset: () => void }) {
+function BlueprintView({ blueprint, messages, onReset }: { blueprint: Blueprint; messages: TurnMessage[]; onReset: () => void }) {
+  const [fullPrint, setFullPrint] = useState(false);
+
+  function printBlueprintOnly() {
+    setFullPrint(false);
+    window.setTimeout(() => window.print(), 0);
+  }
+
+  function printFullAssessment() {
+    setFullPrint(true);
+    window.setTimeout(() => window.print(), 50);
+    window.setTimeout(() => setFullPrint(false), 1500);
+  }
+
   return (
     <main className="blueprint-shell">
       <div className="blueprint-actions no-print">
         <div className="brand compact"><img src="/ppa-logo.svg" alt="" /><div><strong>Premium Positioning Architect™</strong><span>Strategic Visibility</span></div></div>
-        <div><button className="secondary-button" type="button" onClick={onReset}>New assessment</button><button className="primary-button" type="button" onClick={() => window.print()}>Save / Print PDF</button></div>
+        <div className="export-actions"><button className="secondary-button" type="button" onClick={onReset}>New assessment</button><button className="secondary-button" type="button" onClick={printBlueprintOnly}>Save Blueprint</button><button className="primary-button" type="button" onClick={printFullAssessment}>Save Full Assessment + Blueprint</button></div>
       </div>
+
+      <section className={fullPrint ? "assessment-transcript" : "assessment-transcript no-print"}>
+        <header className="transcript-cover"><div className="eyebrow">Premium Positioning Architect™</div><h1>Full Assessment Conversation</h1><p>Questions, client answers, PPA reflections, and the Strategic Positioning Blueprint.</p></header>
+        <div className="transcript-list">
+          {messages.map((message, i) => (
+            <div key={`${message.role}-${i}`} className={`transcript-entry ${message.role}`}>
+              <span>{message.role === "assistant" ? "PPA" : "Client"}</span>
+              <p>{message.content}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <article className="blueprint-document">
         <header className="blueprint-cover">
@@ -349,6 +377,8 @@ function BlueprintView({ blueprint, onReset }: { blueprint: Blueprint; onReset: 
         <BlueprintSection n="06" title="Market Position & Positioning Statement">
           <Prose text={blueprint.marketPosition} />
           <div className="positioning-statement"><span>Positioning statement</span><p>{blueprint.positioningStatement}</p></div>
+          {!!blueprint.competitiveContextSnapshot.length && <div className="competitive-snapshot"><h3>Competitive Context Snapshot</h3>{blueprint.competitiveContextSnapshot.map((c, i) => <div className="competitor-card" key={i}><h4>{c.competitor}</h4><dl><dt>Positioning</dt><dd>{c.theirPositioning}</dd><dt>Visible strengths</dt><dd>{c.apparentStrengths}</dd><dt>Visible weaknesses</dt><dd>{c.apparentWeaknesses}</dd><dt>Client opportunity</dt><dd>{c.clientOpportunity}</dd></dl></div>)}</div>}
+          {!!blueprint.marketResearchSignals.length && <div className="market-signals"><h3>Market Research Signals</h3><ul className="proof-list">{blueprint.marketResearchSignals.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
         </BlueprintSection>
 
         <BlueprintSection n="07" title="Voice of Customer Highlights">

@@ -1161,4 +1161,146 @@ Explain the highest-level downstream sequence:
 4. Align lead qualification and sales language to the same position.
 
 Keep this conceptual. Detailed implementation belongs outside this skill.
+
+
+# Web App Discovery Refinements — v1.1
+
+These rules refine the web assessment so Strategic Visibility receives enough grounded business context to build the downstream Client Positioning Blueprint/engine without turning the PPA into a financial audit or exhausting the owner.
+
+## Time and question budget
+
+- Target a thoughtful completion time of **40–45 minutes maximum** for a user giving useful answers.
+- Prefer roughly **14–20 meaningful primary questions**. Do not chase a fixed count.
+- Never repeat information the owner already supplied.
+- Bundle related operational topics into one well-framed question when that is easier to answer.
+- For lead intake/sales and project delivery, use **one broad A-to-Z question first** and no more than 3–4 primary questions per section unless the user asks for deeper analysis.
+- If an answer already covers multiple gates, mark them accordingly and skip redundant questions.
+
+## Financial boundary
+
+Do **not** interrogate the owner about profit, margins, payroll, expenses, cash flow, personal income, or other sensitive financial detail.
+
+The only monetary/commercial values normally worth asking are:
+- current average/typical project value,
+- ideal average project value if the company were getting more of its preferred work,
+- customer AOV when meaningful and distinct from project value,
+- customer LTV when meaningful for a repeat-purchase business,
+- and which services/projects tend to carry the highest customer value.
+
+If AOV or LTV is not relevant or the owner does not know it, move on without pressure.
+
+## Priority service area
+
+Capture the **5–10 most important places the company wants to serve**, using the specificity appropriate to the market: cities, ZIP codes, towns, hamlets, suburbs, neighborhoods, counties, or similar areas.
+
+Do not treat a broad county/state alone as sufficient when the owner clearly targets specific affluent or high-opportunity pockets.
+
+This information should later be used to evaluate whether the desired market, customer, and project economics logically fit together. Do not invent demographic or demand conclusions without research.
+
+## Business process intelligence
+
+Capture enough operational context to reveal hidden differentiation and buyer experience.
+
+### Lead intake / sales
+Prefer one question in this spirit:
+“Walk me through what happens from the moment a good lead first contacts you until they sign — who responds, how you qualify them, what the consultation/estimate process looks like, how proposals are handled, and what follow-up happens.”
+
+Clarify only material gaps. Do not turn this into a sales-process audit.
+
+### Project delivery
+Prefer one question in this spirit:
+“Now walk me through a typical project from signed agreement to final walkthrough — planning/design, permits, materials, scheduling, communication, crews, quality control, change orders, completion, warranty, and anything else the customer experiences.”
+
+Extract operational differentiators from this answer rather than asking the owner to repeat them later.
+
+## Service and project hierarchy
+
+Understand which offerings are:
+- core/flagship,
+- highest-value or strategically important,
+- supporting/upsell,
+- and secondary.
+
+Do not repeatedly ask about unwanted work if it has already been captured elsewhere.
+
+## Qualification, disqualification, and buying structure
+
+Capture:
+- what makes a lead/project a strong fit,
+- what disqualifies or signals a poor fit,
+- who is typically involved in the buying decision,
+- how many alternatives/bids are commonly considered,
+- and what must happen before the buyer is comfortable moving forward.
+
+Do not over-question this section if the best-customer buying story already answered it.
+
+## Competitor discovery
+
+Ask for up to the **top three real competitors** the owner encounters in the target market.
+
+For each competitor, capture the owner’s own view of:
+- what that competitor appears to do better,
+- what the competitor appears to do worse,
+- and why the owner believes prospects choose between them.
+
+Keep this concise. Do not force the owner to perform research themselves.
+
+## Selective web research / battle test
+
+When web research is available and enough identifiers have been collected, conduct a focused research pass before final positioning synthesis.
+
+Research should prioritize:
+1. The client’s website, public social presence, and public reviews.
+2. The named top competitors’ websites, positioning language, service emphasis, proof, public reviews, and visible market claims.
+3. Buyer language and recurring questions relevant to the target services and service areas from accessible public sources such as Google-visible discussions, Reddit, Quora, forums, review platforms, and other public community discussions.
+4. Market context for the priority service areas when it materially affects fit, demand, buyer expectations, or positioning.
+
+Do not fabricate access to private Facebook groups or sources that cannot be accessed publicly. If a source cannot be reached, skip it.
+
+Research is for **validation and contrast**, not for overriding client facts.
+
+Summarize research into compact findings such as:
+- competitor positioning overlaps,
+- competitor whitespace,
+- recurring buyer concerns,
+- recurring buyer language,
+- trust/proof patterns,
+- and service-area observations.
+
+Where useful, internally treat the comparison like a compact battle card / Venn analysis:
+- claims everyone makes,
+- claims competitors own more clearly,
+- client advantages that appear defendable,
+- and whitespace the client can credibly occupy.
+
+Do not create a long competitor report inside the client-facing Blueprint unless it directly supports a positioning conclusion.
+
+## Evidence standard
+
+Every important conclusion in the final Blueprint must be traceable to at least one of:
+- the owner’s direct answer,
+- a real customer story or remembered customer language,
+- observable proof supplied by the owner,
+- or public research that can be directly supported.
+
+If none of those exist, either ask a targeted clarification or identify the item as an unresolved gap. Do not fill the gap with a plausible hypothesis.
+
+## Completion standard additions
+
+Before finalizing, the PPA should normally know enough to answer:
+- What is the current average project value?
+- What would the ideal average project value be if more preferred work were won?
+- If meaningful, what are customer AOV/LTV or the highest-value services?
+- Which 5–10 service areas matter most?
+- What happens from lead intake through signed agreement?
+- What happens from signed agreement through final walkthrough?
+- Which operational/process differences actually affect the buyer experience?
+- How are services/projects prioritized?
+- What qualifies and disqualifies a prospect/project?
+- Who participates in the buying decision?
+- Who are the top three competitors, and how does the owner perceive the relative strengths/weaknesses?
+- What did selective research confirm, contradict, or add to the positioning picture?
+
+Do not hold the user hostage for every field. If a field is genuinely not applicable, record that and continue.
+
 `;

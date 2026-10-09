@@ -12,7 +12,9 @@ Standalone web version of the Premium Positioning Architect™ by Strategic Visi
 - Does not require the contractor to have a ChatGPT account.
 - Does not send leads to a CRM or capture contact details.
 - Can optionally be protected with a shared access code.
-- Supports a print / Save as PDF workflow for the finished Blueprint.
+- Supports two export paths: Blueprint only, or Full Assessment + Blueprint with the complete question/answer/PPA reflection transcript.
+- Captures priority service areas, project values, lead intake/sales flow, project delivery, buying structure, service hierarchy, and competitor context without turning the assessment into a financial audit.
+- Can perform a selective public-market and competitor research pass when web research is enabled.
 
 ## Architecture
 
@@ -64,9 +66,9 @@ The access code is verified server-side. Do not put the real code in any `NEXT_P
 
 ## Public research
 
-Set `PPA_ENABLE_WEB_RESEARCH=true` if you want the final synthesis request to have access to OpenAI's web search tool. The model is instructed to use research selectively and never override direct owner facts.
+Set `PPA_ENABLE_WEB_RESEARCH=true` to enable the focused market/competitor research pass. Research is permitted during the positioning pressure-test stage and during final synthesis. It is instructed to prioritize the client's public footprint, named competitors, public reviews, buyer language, and relevant service-area context while never overriding direct owner facts.
 
-For the first contractor beta, leaving this `false` is recommended. It keeps the assessment simpler, faster, and less expensive while you validate the experience.
+For the full Strategic Visibility client workflow, `true` is recommended. Use `false` only when you explicitly want a faster no-research assessment.
 
 ## Privacy behavior
 
@@ -80,3 +82,12 @@ See `DEPLOYMENT.md`.
 
 ### v1.0.2 UX improvements
 The opening question is rendered locally for an immediate start. When an access code is configured, the app detects that requirement from the server and presents a code field before starting. Adaptive AI transitions display an animated Thinking indicator while the next question is generated.
+
+
+### v1.1.0 discovery expansion
+- Keeps the 40–45 minute maximum target and avoids profit/margin interrogation.
+- Captures current and ideal project value, optional AOV/LTV when relevant, highest-value services, and 5–10 priority service areas.
+- Adds concise lead-intake/sales and project-delivery discovery, preferably as A-to-Z process questions rather than long checklists.
+- Adds service hierarchy, qualification/disqualification, buying-decision structure, and top-three competitor self-assessment.
+- Adds selective public research and a compact Competitive Context Snapshot / Market Research Signals inside the Blueprint.
+- Adds Save Blueprint and Save Full Assessment + Blueprint export options.
