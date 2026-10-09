@@ -281,7 +281,6 @@ async function createPdf(body: ExportBody) {
   const html = await buildHtml(body);
   const browser = await puppeteer.launch({
     args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
-    defaultViewport: chromium.defaultViewport,
     executablePath: await chromium.executablePath(),
     headless: "shell",
   });
