@@ -1,46 +1,29 @@
-# Premium Positioning Architect™ Web App
+# Premium Positioning Architect™ Web App — v1.6.0
 
 Standalone web version of the Premium Positioning Architect™ by Strategic Visibility LLC.
 
-## What this app does
+## What this build does
 
-- Runs the same adaptive PPA discovery logic as the ChatGPT plugin.
-- Uses GPT-5.6 Terra for efficient interview/question selection.
-- Uses GPT-5.6 Sol for the final Strategic Positioning Blueprint™ synthesis.
-- Saves progress locally in the contractor's browser, so they can leave and resume on the same device.
-- Keeps the OpenAI API key server-side.
-- Does not require the contractor to have a ChatGPT account.
-- Does not send leads to a CRM or capture contact details.
-- Can optionally be protected with a shared access code.
-- Supports two export paths: Blueprint only, or Full Assessment + Blueprint with the complete question/answer/PPA reflection transcript.
-- Captures priority service areas, project values, lead intake/sales flow, project delivery, buying structure, service hierarchy, and competitor context without turning the assessment into a financial audit.
-- Can perform a selective public-market and competitor research pass when web research is enabled.
+- Runs the adaptive PPA discovery interview outside ChatGPT.
+- Uses GPT-5.6 Terra for the interview and GPT-5.6 Sol for final Blueprint synthesis.
+- Uses focused public web research when `PPA_ENABLE_WEB_RESEARCH=true`.
+- Generates a polished Strategic Positioning Blueprint plus an optional Full Assessment + Blueprint PDF.
+- Automatically emails the completed Full Assessment + Blueprint PDF to Strategic Visibility when Resend is configured.
+- Saves progress locally in the browser on every step.
+- Adds recommended server-side progress/results persistence through Upstash Redis, with a 60-day session window.
+- Restores incomplete assessments and completed Blueprints when the same browser returns later.
+- Keeps OpenAI, Resend, and Redis credentials server-side.
+- Supports an optional shared PPA access code.
 
-## Architecture
+## v1.6.0 UI changes
 
-Browser UI -> Next.js server routes -> OpenAI Responses API
-
-The browser stores the structured assessment state in localStorage. Each turn sends a compact structured state plus recent conversation context to the server. The server calls the OpenAI Responses API using Structured Outputs, updates the state, and returns the next question.
-
-The final Blueprint is generated in a separate higher-quality synthesis call.
-
-## Models
-
-Defaults:
-
-- Interview: `gpt-5.6-terra`
-- Final Blueprint: `gpt-5.6-sol`
-
-Both are configurable with environment variables.
-
-## Local setup
-
-1. Install Node.js 20+.
-2. Run `npm install`.
-3. Copy `.env.example` to `.env.local`.
-4. Add your OpenAI API key to `OPENAI_API_KEY`.
-5. Run `npm run dev`.
-6. Open `http://localhost:3000`.
+- Strategic Visibility logo is centered in the top header and links to `https://strategicvisibility.net`.
+- PPA start-page mark is smaller and a readable `Premium Positioning Architect` product name is displayed beneath it.
+- Main headline is slightly smaller.
+- Removed the gold `Strategic Positioning Assessment` eyebrow from the start page.
+- Updated start-page description to the approved positioning-focused copy.
+- Added a fourth review notice immediately above the Start button explaining that completed results are automatically emailed to Strategic Visibility.
+- Added completion-page delivery status so the client can see whether the automatic review copy was sent successfully.
 
 ## Environment variables
 
@@ -48,83 +31,33 @@ Both are configurable with environment variables.
 OPENAI_API_KEY=...
 PPA_INTERVIEW_MODEL=gpt-5.6-terra
 PPA_BLUEPRINT_MODEL=gpt-5.6-sol
-PPA_ENABLE_WEB_RESEARCH=false
-PPA_ACCESS_CODE=
-NEXT_PUBLIC_PPA_REQUIRE_ACCESS=false
+PPA_ENABLE_WEB_RESEARCH=true
+PPA_ACCESS_CODE=...
+
+RESEND_API_KEY=...
+PPA_RESULTS_EMAIL=you@strategicvisibility.net
+PPA_FROM_EMAIL=PPA <ppa@strategicvisibility.net>
+
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
 ```
 
-### Optional access protection
+`RESEND_*` variables enable automatic completed-assessment email delivery.
 
-To keep the tool limited to people you send it to:
+`UPSTASH_REDIS_*` variables enable server-side progress/results recovery. If they are absent, the app still uses browser localStorage as a fallback.
 
-```env
-PPA_ACCESS_CODE=your-shared-code
-NEXT_PUBLIC_PPA_REQUIRE_ACCESS=true
-```
+## Persistence behavior
 
-The access code is verified server-side. Do not put the real code in any `NEXT_PUBLIC_` variable.
+The browser saves the structured assessment state, conversation, and completed Blueprint locally. When Upstash is configured, the same snapshot is also saved server-side under a random HttpOnly session cookie and retained for 60 days. This means a user can close the page and return later in the same browser without losing a completed Blueprint, even if local browser storage fails.
 
-## Public research
+This is not an account system and does not collect a client email address. Cross-device recovery is not included in this build.
 
-Set `PPA_ENABLE_WEB_RESEARCH=true` to enable the focused market/competitor research pass. Research is permitted during the positioning pressure-test stage and during final synthesis. It is instructed to prioritize the client's public footprint, named competitors, public reviews, buyer language, and relevant service-area context while never overriding direct owner facts.
+## Automatic email behavior
 
-For the full Strategic Visibility client workflow, `true` is recommended. Use `false` only when you explicitly want a faster no-research assessment.
+Immediately after a Blueprint is generated, the app creates the Full Assessment + Blueprint PDF and sends it to `PPA_RESULTS_EMAIL` using Resend. The user still retains the normal PDF download buttons.
 
-## Privacy behavior
-
-The app uses `store: false` for model responses and does not maintain its own server-side assessment database. Browser progress is stored in localStorage on the user's device.
-
-If you later add account login, cross-device resume, email delivery, analytics, CRM capture, or a database, update the public privacy policy before launch.
+The assessment does not fail if the email service has a temporary problem. Instead, the results screen displays a delivery warning and asks the user to download the Full Assessment PDF manually.
 
 ## Deployment
 
 See `DEPLOYMENT.md`.
-
-### v1.0.2 UX improvements
-The opening question is rendered locally for an immediate start. When an access code is configured, the app detects that requirement from the server and presents a code field before starting. Adaptive AI transitions display an animated Thinking indicator while the next question is generated.
-
-
-### v1.1.0 discovery expansion
-- Keeps the 40–45 minute maximum target and avoids profit/margin interrogation.
-- Captures current and ideal project value, optional AOV/LTV when relevant, highest-value services, and 5–10 priority service areas.
-- Adds concise lead-intake/sales and project-delivery discovery, preferably as A-to-Z process questions rather than long checklists.
-- Adds service hierarchy, qualification/disqualification, buying-decision structure, and top-three competitor self-assessment.
-- Adds selective public research and a compact Competitive Context Snapshot / Market Research Signals inside the Blueprint.
-- Adds Save Blueprint and Save Full Assessment + Blueprint export options.
-
-
-## v1.4.2 changes
-
-- Direct Word (`.docx`) downloads for Blueprint-only and Full Assessment + Blueprint exports.
-- Kept Print / Save PDF as a separate optional action instead of mislabeling print as save.
-- Final Blueprint synthesis now receives the full assessment conversation in addition to structured discovery state, preserving nuance and exact client language.
-- Full Assessment export includes the complete conversation, Blueprint, and available research/source notes.
-- Added a stricter silent completeness audit before the interview can move to `ready`; question count remains adaptive rather than fixed.
-
-
-## v1.4.2 PDF export
-
-- Blueprint downloads are now real PDF files.
-- Full Assessment + Blueprint downloads are now real PDF files.
-- Browser Print / Save PDF remains available as a separate fallback.
-- DOCX generation was removed, so recipients do not need Microsoft Word.
-
-
-## v1.4.2 PDF redesign
-- Premium branded PDF cover matching the web app navy/gold system.
-- Section-number hierarchy, branded page headers/footers, and page numbers.
-- Differentiator cards, positioning statement callout, Voice of Customer quote panels, strategic priority cards, and styled transcript appendix.
-- PDF remains a true direct download; Print / Save PDF remains separate.
-
-## v1.4.2 PDF parity upgrade
-
-The PDF exporter now renders the Blueprint as HTML/CSS through headless Chromium rather than drawing a conventional report with PDF primitives. The export intentionally mirrors the web Blueprint design: same navy cover, Georgia-style editorial headings, section numbering, whitespace rhythm, differentiator cards, positioning statement treatment, Voice of Customer styling, priority layout, and transcript message bubbles. Full Assessment exports place the polished Blueprint first and the complete conversation in an appendix.
-
-
-## v1.4.2 PDF pagination polish
-- Cleaner section/page breaks for the Blueprint PDF.
-- Headings stay with the content that follows them.
-- Cards, quote blocks, priorities, and competitor callouts avoid splitting across pages when possible.
-- Core Differentiators, Market Position, Voice of Customer, and Strategic Priorities start on fresh pages for a cleaner document rhythm.
-- Cover footer text is larger and easier to read.
-- Cover now includes the Blueprint assessment date.

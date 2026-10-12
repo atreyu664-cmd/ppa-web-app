@@ -1,107 +1,71 @@
-# Deployment Guide — Strategic Visibility
+# Deployment Guide — PPA Web App v1.6.0
 
-## Recommended V1 setup
+## Update the current Vercel deployment
 
-Deploy the app on Vercel and connect it to a subdomain such as:
+1. Unzip the v1.6.0 package.
+2. Upload the contents to the root of the existing GitHub `ppa-web-app` repository, replacing matching files.
+3. Commit the changes.
+4. Vercel should deploy the new commit automatically.
 
-`ppa.strategicvisibility.net`
+## Required existing variables
 
-Then either send contractors directly to that URL or embed it on a page of the main Strategic Visibility website.
-
-## 1. Create a dedicated OpenAI API project
-
-Use a separate OpenAI API project for the PPA web app. This keeps usage, keys, limits, and spend isolated from unrelated API work.
-
-Create a project API key and keep it private. Never put an OpenAI API key into browser JavaScript or a public website field.
-
-## 2. Put the code in GitHub
-
-Create a private GitHub repository and upload this project directory.
-
-## 3. Deploy to Vercel
-
-- Sign in to Vercel.
-- Import the GitHub repository.
-- Vercel should detect Next.js automatically.
-- Add the environment variables from `.env.example`.
-- Deploy.
-
-## 4. Recommended production environment variables
+Keep these in Vercel:
 
 ```env
 OPENAI_API_KEY=YOUR_PROJECT_KEY
 PPA_INTERVIEW_MODEL=gpt-5.6-terra
 PPA_BLUEPRINT_MODEL=gpt-5.6-sol
 PPA_ENABLE_WEB_RESEARCH=true
-PPA_ACCESS_CODE=CHANGE-THIS-CODE
-NEXT_PUBLIC_PPA_REQUIRE_ACCESS=true
+PPA_ACCESS_CODE=YOUR_ACCESS_CODE
 ```
 
-For warm leads and existing contacts, access-code protection is recommended for V1. It reduces accidental public usage and protects API spend without turning the assessment into a lead form.
+## Automatic email delivery
 
-## 5. Add a custom domain
+Add these Vercel environment variables:
 
-In Vercel, add:
-
-`ppa.strategicvisibility.net`
-
-Vercel will show the DNS record to add at your domain provider.
-
-## 6. Put it on an existing webpage
-
-### Preferred option: direct branded page
-
-Link a button on your website to:
-
-`https://ppa.strategicvisibility.net`
-
-This gives the cleanest mobile experience and makes printing the final Blueprint easier.
-
-### Embed option
-
-If you want it literally inside a page on strategicvisibility.net, use an iframe after the Vercel app is live:
-
-```html
-<iframe
-  src="https://ppa.strategicvisibility.net"
-  title="Premium Positioning Architect"
-  style="width:100%;min-height:1100px;border:0;border-radius:16px;"
-  loading="lazy">
-</iframe>
+```env
+RESEND_API_KEY=YOUR_RESEND_KEY
+PPA_RESULTS_EMAIL=YOUR_DESTINATION_EMAIL
+PPA_FROM_EMAIL=PPA <ppa@strategicvisibility.net>
 ```
 
-For WordPress, paste this into a Custom HTML block. A direct page/subdomain is still preferred on mobile because the assessment grows vertically as the conversation progresses.
+`PPA_FROM_EMAIL` must use a domain verified in Resend.
 
-## 7. API spend guardrails
+After changing environment variables, redeploy the project so the production functions receive the new values.
 
-In the OpenAI Platform dashboard for the dedicated PPA project:
+## Server-side progress/results persistence — recommended
 
-- set a monthly project budget/alert;
-- review usage during the first 5–10 contractor runs;
-- keep the shared access code enabled during beta;
-- rotate the access code if it gets passed around too widely.
+The app always saves locally in the browser. For stronger recovery after a user closes the page, connect an Upstash Redis database and add:
 
-## 8. Beta test before broad use
+```env
+UPSTASH_REDIS_REST_URL=YOUR_UPSTASH_REST_URL
+UPSTASH_REDIS_REST_TOKEN=YOUR_UPSTASH_REST_TOKEN
+```
 
-Use 3–5 contractors you already know. Watch for:
+The code uses the Redis REST API directly, so no additional npm package is required.
 
-- questions they misunderstand;
-- places they become fatigued;
-- answers the app fails to interpret correctly;
-- whether the Blueprint sounds specifically like their company;
-- whether the session actually fits the 30–45 minute target;
-- whether the final positioning statement and differentiators feel defensible.
+### Easiest Vercel setup
 
-Do not expand scope until those tests show a real need.
+1. In Vercel, open the PPA project.
+2. Open **Storage / Marketplace** and add an **Upstash Redis** database to this project.
+3. Choose a region near the Vercel deployment.
+4. Let the integration add the Redis environment variables, or copy the REST URL and REST token from Upstash into the names above.
+5. Redeploy.
 
-## 9. Future upgrades (not required for V1)
+When enabled, progress and completed results are retained for 60 days and associated with a random HttpOnly browser session cookie.
 
-- Cross-device resume with a database
-- Unique invite links instead of a shared code
-- File/review uploads
-- Branded PDF generation on the server
-- Admin dashboard for reviewing completed Blueprints
-- Optional email delivery
-- Analytics around drop-off points
+## Test after deployment
 
-These should be added only after the core assessment has been validated with real contractor sessions.
+Run one full test and confirm:
+
+1. Start-page logo sizing and centered Strategic Visibility header look correct on desktop and mobile.
+2. The fourth review box appears above the Start button.
+3. Complete several questions, close the tab, return, and confirm the assessment resumes.
+4. Complete the Blueprint, close the tab, return, and confirm the results screen returns with download buttons.
+5. Confirm the Full Assessment + Blueprint PDF arrives at `PPA_RESULTS_EMAIL`.
+6. Confirm both PDF download buttons still work.
+7. If automatic email fails, confirm the results screen shows a warning but the Blueprint remains accessible.
+
+## Custom domain
+
+Keep the app on the existing Vercel custom domain, e.g. `https://ppa.strategicvisibility.net`.

@@ -1,15 +1,22 @@
-# PPA Web App v1.4.1 - Build QA
+# Build QA — v1.6.0
 
-- Assessment flow is unchanged from v1.3.1.
-- Replaced manual pdf-lib renderer with HTML/CSS-to-PDF rendering via puppeteer-core + @sparticuz/chromium.
-- PDF template mirrors the existing Blueprint web UI classes, spacing, hierarchy, cards, and colors.
-- Full Assessment PDF places the polished Blueprint first and transcript/research appendix second.
-- PDF user/client text is HTML-escaped before rendering.
-- API key remains server-side.
-- Vercel production build/runtime is the final compatibility check for the Chromium package.
+## Changes reviewed
 
-## v1.4.2 checks
-- PDF cover footer enlarged.
-- Assessment date added to cover.
-- Print CSS tightened for heading/card/page-break integrity.
-- Major strategic sections receive deliberate page starts to reduce awkward runovers.
+- Start-page PPA mark reduced in size.
+- Readable HTML product name added beneath the PPA mark.
+- Main headline reduced in size.
+- Removed start-page `Strategic Positioning Assessment` eyebrow.
+- Approved three-line positioning description added.
+- Strategic Visibility logo centered in the top header and remains linked to `https://strategicvisibility.net`.
+- Fourth start-page review notice added immediately above the Start button.
+- Automatic completed-assessment email route added using Resend.
+- Email delivery status added to the results page.
+- Existing PDF export renderer moved into a shared server utility so both downloads and automatic email use the same Full Assessment + Blueprint PDF.
+- Browser persistence hardened with hydration-before-save behavior.
+- Explicit synchronous save added when the Blueprint is generated.
+- Optional Upstash Redis server persistence added with a 60-day TTL and HttpOnly session cookie.
+- Completed Blueprint and transcript can be restored after returning in the same browser when server persistence is configured.
+
+## Validation limitation
+
+The production dependency set is unchanged from v1.5.0, but a full local `npm install` / Next.js production build could not be completed in this environment because dependency installation timed out. Vercel remains the authoritative production compile check.

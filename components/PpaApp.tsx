@@ -26,8 +26,18 @@ type Blueprint = {
   nextStep: string;
 };
 
+type EmailStatus = "idle" | "sending" | "sent" | "failed";
+type SavedSnapshot = {
+  state: PpaState;
+  messages: TurnMessage[];
+  started: boolean;
+  blueprint: Blueprint | null;
+  emailSent?: boolean;
+  updatedAt?: string;
+  completedAt?: string | null;
+};
+
 const STORAGE_KEY = "ppa-web-session-v3";
-const LEGACY_STORAGE_KEYS = ["ppa-web-session-v1", "ppa-web-session-v2"];
 const OPENING_QUESTION = "Before we get into positioning, give me the quick picture: what does your company do, where do you operate, and what kind of work makes up most of the business today?";
 const STAGES = [
   ["business_direction", "Business Direction"],
@@ -55,27 +65,55 @@ export default function PpaApp() {
   const [accessCode, setAccessCode] = useState("");
   const [accessRequired, setAccessRequired] = useState<boolean | null>(null);
   const [authorized, setAuthorized] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [serverPersistence, setServerPersistence] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    try {
-      // v1.0.2 intentionally starts a clean beta session so stale pre-instant-opening
-      // state cannot renumber or duplicate the first question.
-      for (const key of LEGACY_STORAGE_KEYS) localStorage.removeItem(key);
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (saved.state && Array.isArray(saved.messages)) {
-          setState(saved.state);
-          setMessages(saved.messages);
-          setBlueprint(saved.blueprint || null);
-          setRestored(Boolean(saved.started && saved.messages.length));
-        }
+    let cancelled = false;
+
+    async function hydrateSession() {
+      let local: SavedSnapshot | null = null;
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) local = JSON.parse(raw) as SavedSnapshot;
+      } catch {
+        local = null;
       }
-    } catch {
-      // Ignore invalid local state.
+
+      let server: SavedSnapshot | null = null;
+      try {
+        const response = await fetch("/api/ppa/session", { cache: "no-store" });
+        const data = await response.json();
+        if (!cancelled) setServerPersistence(Boolean(data.enabled));
+        if (data?.data) server = data.data as SavedSnapshot;
+      } catch {
+        // Browser storage remains the fallback.
+      }
+
+      if (cancelled) return;
+      const localMessages = local?.messages?.length || 0;
+      const serverMessages = server?.messages?.length || 0;
+      const localTime = local?.updatedAt ? Date.parse(local.updatedAt) : 0;
+      const serverTime = server?.updatedAt ? Date.parse(server.updatedAt) : 0;
+      let saved = local;
+      if (server && (!local || (server.blueprint && !local.blueprint) || serverMessages > localMessages || serverTime > localTime)) {
+        saved = server;
+      }
+
+      if (saved?.state && Array.isArray(saved.messages)) {
+        setState(saved.state);
+        setMessages(saved.messages);
+        setBlueprint(saved.blueprint || null);
+        setStarted(Boolean(saved.started || saved.messages.length || saved.blueprint));
+        setRestored(Boolean(saved.messages.length || saved.blueprint));
+        if (saved.emailSent) setEmailStatus("sent");
+      }
+      setHydrated(true);
     }
 
+    void hydrateSession();
     void fetch("/api/ppa/access", { cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
@@ -83,18 +121,33 @@ export default function PpaApp() {
         setAccessRequired(required);
         if (!required) setAuthorized(true);
       })
-      .catch(() => {
-        setAccessRequired(true);
-      });
+      .catch(() => setAccessRequired(true));
+
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
+    if (!hydrated || (!started && messages.length === 0 && !blueprint)) return;
+    const snapshot: SavedSnapshot = {
+      state, messages, started, blueprint,
+      emailSent: emailStatus === "sent",
+      updatedAt: new Date().toISOString(),
+      completedAt: blueprint ? new Date().toISOString() : null,
+    };
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, messages, started, blueprint }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
     } catch {
-      // The assessment still works without browser storage.
+      // Server persistence remains available when browser storage is restricted.
     }
-  }, [state, messages, started, blueprint]);
+    const timer = window.setTimeout(() => {
+      void fetch("/api/ppa/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot),
+      }).catch(() => undefined);
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [hydrated, state, messages, started, blueprint, emailStatus]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -183,6 +236,22 @@ export default function PpaApp() {
     await requestTurn({ userAnswer: value, nextMessages });
   }
 
+  async function emailCompletedAssessment(completedBlueprint: Blueprint) {
+    setEmailStatus("sending");
+    try {
+      const response = await fetch("/api/ppa/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blueprint: completedBlueprint, messages, state, includeTranscript: true, accessCode }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.sent) throw new Error(data.error || "Unable to email the completed assessment.");
+      setEmailStatus("sent");
+    } catch {
+      setEmailStatus("failed");
+    }
+  }
+
   async function buildBlueprint() {
     setBlueprintLoading(true);
     setError("");
@@ -194,7 +263,15 @@ export default function PpaApp() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to generate the Blueprint.");
-      setBlueprint(data as Blueprint);
+      const completedBlueprint = data as Blueprint;
+      setBlueprint(completedBlueprint);
+      const snapshot: SavedSnapshot = {
+        state, messages, started: true, blueprint: completedBlueprint, emailSent: false,
+        updatedAt: new Date().toISOString(), completedAt: new Date().toISOString(),
+      };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot)); } catch {}
+      void fetch("/api/ppa/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(snapshot) }).catch(() => undefined);
+      void emailCompletedAssessment(completedBlueprint);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to generate the Blueprint.");
     } finally {
@@ -212,11 +289,16 @@ export default function PpaApp() {
     setBlueprint(null);
     setRestored(false);
     setError("");
+    setEmailStatus("idle");
+    void fetch("/api/ppa/session", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state: createInitialState(), messages: [], started: false, blueprint: null, emailSent: false, completedAt: null }),
+    }).catch(() => undefined);
     if (accessRequired) setAuthorized(false);
   }
 
   if (blueprint) {
-    return <BlueprintView blueprint={blueprint} messages={messages} state={state} accessCode={accessCode} onReset={reset} />;
+    return <BlueprintView blueprint={blueprint} messages={messages} state={state} accessCode={accessCode} emailStatus={emailStatus} onReset={reset} />;
   }
 
   return (
@@ -237,22 +319,19 @@ export default function PpaApp() {
       {!started ? (
         <section className="welcome">
           <div className="welcome-mark-wrap">
-            <img
-              className="welcome-mark"
-              src="/ppa-premium-mark.png"
-              alt="Premium Positioning Architect"
-            />
+            <img className="welcome-mark" src="/ppa-premium-mark.png" alt="PPA brand mark" />
+            <div className="welcome-product-name">Premium Positioning Architect</div>
           </div>
-          <div className="eyebrow">Strategic Positioning Assessment</div>
           <h1>Get clear on why the right customers should choose you.</h1>
-          <p className="lede">
-            This guided assessment looks beneath generic claims like “quality” and “great service” to uncover
-            who your best-fit customer really is, what they care about, and what makes your company meaningfully different.
-          </p>
+          <p className="lede">Most businesses don’t have a marketing problem — they have a positioning problem. The PPA uncovers what sets you apart, who your best customers are, and why they choose you — then turns it into a clear Strategic Positioning Blueprint.</p>
           <div className="welcome-grid">
             <div><b>One question at a time</b><span>Built around your actual business, not a rigid form.</span></div>
             <div><b>About 30–45 minutes</b><span>Detailed answers can shorten the process.</span></div>
             <div><b>A finished Blueprint</b><span>Nine sections you can use as a positioning reference.</span></div>
+          </div>
+          <div className="review-box">
+            <b>Automatically shared for review</b>
+            <span>Your completed assessment and Blueprint will be emailed directly to Strategic Visibility for review. No extra step is required.</span>
           </div>
           {restored && <p className="resume-note">A saved assessment was found on this device.</p>}
           {accessRequired && !authorized && <div className="access-box"><label htmlFor="accessCode">Assessment access code</label><input id="accessCode" type="password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} placeholder="Enter the code you were given" autoComplete="off" /></div>}
@@ -260,7 +339,7 @@ export default function PpaApp() {
           <button className="primary-button large" type="button" onClick={begin} disabled={loading || accessRequired === null}>
             {loading ? "Checking access…" : restored ? "Continue assessment" : "Build my Positioning Blueprint"}
           </button>
-          <p className="privacy-note">Your progress is saved in this browser so you can come back later. Don’t enter passwords, payment details, or other sensitive personal information.</p>
+          <p className="privacy-note">{serverPersistence ? "Your progress is saved automatically so you can return later, even after closing the page." : "Your progress is saved automatically in this browser so you can return later."} Don’t enter passwords, payment details, or other sensitive personal information.</p>
         </section>
       ) : (
         <div className="assessment-layout">
@@ -332,7 +411,7 @@ export default function PpaApp() {
   );
 }
 
-function BlueprintView({ blueprint, messages, state, accessCode, onReset }: { blueprint: Blueprint; messages: TurnMessage[]; state: PpaState; accessCode: string; onReset: () => void }) {
+function BlueprintView({ blueprint, messages, state, accessCode, emailStatus, onReset }: { blueprint: Blueprint; messages: TurnMessage[]; state: PpaState; accessCode: string; emailStatus: EmailStatus; onReset: () => void }) {
   const [exporting, setExporting] = useState<"blueprint" | "full" | null>(null);
   const [exportError, setExportError] = useState("");
 
@@ -388,6 +467,12 @@ function BlueprintView({ blueprint, messages, state, accessCode, onReset }: { bl
         </div>
       </div>
       {exportError && <div className="error-box no-print" role="alert">{exportError}</div>}
+      <div className={`delivery-status no-print ${emailStatus}`}>
+        {emailStatus === "sending" && "Sending a copy of the full assessment to Strategic Visibility…"}
+        {emailStatus === "sent" && "Full assessment + Blueprint emailed to Strategic Visibility for review."}
+        {emailStatus === "failed" && "Your Blueprint is saved, but the automatic email could not be sent. Please download the Full Assessment PDF and send it to Strategic Visibility."}
+        {emailStatus === "idle" && "Your completed results are saved and available to download below."}
+      </div>
 
       <article className="blueprint-document">
         <header className="blueprint-cover">
