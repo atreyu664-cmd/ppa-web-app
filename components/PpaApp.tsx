@@ -367,7 +367,7 @@ export default function PpaApp() {
                   <p>{message.content}</p>
                 </div>
               ))}
-              {loading && <div className="message assistant thinking" role="status" aria-label="PPA is thinking"><div className="message-label">PPA</div><div className="thinking-row"><span>Thinking</span><span className="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span></div></div>}
+              {loading && <div className="message assistant thinking" role="status" aria-label="PPA is thinking"><div className="message-label">PPA</div><div className="thinking-row"><span>Working through that</span><span className="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span></div></div>}
               <div ref={bottomRef} />
             </div>
 
